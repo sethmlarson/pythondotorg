@@ -1,9 +1,11 @@
 """Views for the Python job board."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
 from apps.jobs.forms import JobForm, JobReviewCommentForm
@@ -460,7 +462,9 @@ class JobEdit(LoginRequiredMixin, JobMixin, UpdateView):
     def get_success_url(self):
         """Return the next URL or the job preview page."""
         next_url = self.request.POST.get("next")
-        if next_url:
+        allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
+        require_https = not bool(getattr(settings, "DEBUG", False))
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=allowed_hosts, require_https=require_https):
             return next_url
         if self.object.pk:
             return reverse("jobs:job_preview", kwargs={"pk": self.object.id})

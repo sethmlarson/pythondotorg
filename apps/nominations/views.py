@@ -1,9 +1,11 @@
 """Views for browsing elections, nominees, and managing nominations."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import Http404
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.nominations.forms import NominationAcceptForm, NominationCreateForm, NominationForm
@@ -155,7 +157,9 @@ class NominationEdit(LoginRequiredMixin, NominationMixin, UserPassesTestMixin, U
     def get_success_url(self):
         """Return the next URL from POST data or the nomination detail page."""
         next_url = self.request.POST.get("next")
-        if next_url:
+        allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
+        require_https = not bool(getattr(settings, "DEBUG", False))
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=allowed_hosts, require_https=require_https):
             return next_url
 
         if self.object.pk:
